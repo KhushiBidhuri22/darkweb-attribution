@@ -12,6 +12,16 @@ from .routers import (
     export,
     timeline,
 )
+from .routers import (
+    actors,
+    posts,
+    internal,
+    search,
+    graph,
+    export,
+    timeline,
+    attribution,
+)
 
 
 
@@ -20,6 +30,7 @@ app.include_router(graph.router)
 app.include_router(export.router)
 app.include_router(timeline.router)
 app.include_router(search.router)
+app.include_router(attribution.router)
 
 
 @app.on_event("startup")
