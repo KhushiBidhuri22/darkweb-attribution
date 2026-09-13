@@ -1,0 +1,982 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>SIH Dark Web Intelligence</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: #0b1120;
+            color: #e5e7eb;
+        }
+
+        header {
+            padding: 24px 40px;
+            border-bottom: 1px solid #1f2937;
+            background: #111827;
+        }
+
+        header h1 {
+            margin: 0;
+            font-size: 28px;
+        }
+
+        header p {
+            margin: 8px 0 0;
+            color: #9ca3af;
+        }
+
+        .container {
+            padding: 30px 40px;
+            max-width: 1500px;
+            margin: auto;
+        }
+
+        .controls {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }
+
+        select,
+        button {
+            padding: 12px 16px;
+            border-radius: 8px;
+            border: 1px solid #374151;
+            font-size: 15px;
+        }
+
+        select {
+            background: #111827;
+            color: white;
+            min-width: 220px;
+        }
+
+        button {
+            background: #2563eb;
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        button:hover {
+            background: #1d4ed8;
+        }
+
+        .status {
+            margin: 15px 0 20px;
+            color: #9ca3af;
+        }
+
+        .error {
+            color: #ef4444;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: 280px 1fr;
+            gap: 20px;
+        }
+
+        .card {
+            background: #111827;
+            border: 1px solid #1f2937;
+            border-radius: 12px;
+            padding: 20px;
+        }
+
+        .card h2 {
+            margin-top: 0;
+            font-size: 18px;
+        }
+
+        .metric {
+            margin: 18px 0;
+        }
+
+        .metric-label {
+            color: #9ca3af;
+            font-size: 13px;
+        }
+
+        .metric-value {
+            font-size: 25px;
+            font-weight: bold;
+            margin-top: 5px;
+        }
+
+        .relationship-list {
+            line-height: 1.7;
+            font-size: 13px;
+        }
+
+        .graph-area {
+            min-height: 560px;
+        }
+
+        #graphCanvas {
+            width: 100%;
+            height: 480px;
+            display: block;
+            background: #0b1120;
+            border: 1px solid #374151;
+            border-radius: 10px;
+        }
+
+        .graph-info {
+            margin-top: 10px;
+            color: #9ca3af;
+            font-size: 13px;
+        }
+
+        .evidence {
+            margin-top: 20px;
+        }
+
+        .attribution-controls {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
+        }
+
+        .evidence-box {
+            border: 1px solid #374151;
+            border-radius: 10px;
+            padding: 18px;
+            background: #0b1120;
+        }
+
+        .score {
+            font-size: 42px;
+            font-weight: bold;
+            margin: 8px 0;
+        }
+
+        .high {
+            color: #22c55e;
+        }
+
+        .medium {
+            color: #f59e0b;
+        }
+
+        .low {
+            color: #ef4444;
+        }
+
+        .evidence-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid #1f2937;
+        }
+
+        .evidence-row:last-child {
+            border-bottom: none;
+        }
+
+        .small {
+            color: #9ca3af;
+            font-size: 13px;
+        }
+
+        @media (max-width: 900px) {
+            .grid {
+                grid-template-columns: 1fr;
+            }
+
+            .container {
+                padding: 20px;
+            }
+
+            #graphCanvas {
+                height: 400px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+<header>
+    <h1>SIH Dark Web Intelligence Platform</h1>
+    <p>Graph-based investigation and actor attribution prototype</p>
+</header>
+
+<div class="container">
+
+    <!-- ACTOR INVESTIGATION CONTROLS -->
+    <div class="controls">
+
+        <select id="actorSelect">
+            <option value="">Loading actors...</option>
+        </select>
+
+        <button onclick="investigateActor()">
+            INVESTIGATE
+        </button>
+
+    </div>
+
+    <div id="status" class="status">
+        Loading actor database...
+    </div>
+
+
+    <!-- ACTOR + GRAPH -->
+    <div class="grid">
+
+        <div class="card">
+
+            <h2>Actor Profile</h2>
+
+            <div class="metric">
+                <div class="metric-label">
+                    Actor ID
+                </div>
+
+                <div id="actorId" class="metric-value">
+                    —
+                </div>
+            </div>
+
+            <div class="metric">
+                <div class="metric-label">
+                    Connected Entities
+                </div>
+
+                <div id="connectedEntities" class="metric-value">
+                    —
+                </div>
+            </div>
+
+            <div class="metric">
+                <div class="metric-label">
+                    Relationships
+                </div>
+
+                <div id="relationshipCount" class="metric-value">
+                    —
+                </div>
+            </div>
+
+            <div class="metric">
+
+                <div class="metric-label">
+                    Evidence Types
+                </div>
+
+                <div
+                    id="relationshipTypes"
+                    class="relationship-list"
+                >
+                    —
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <div class="card graph-area">
+
+            <h2>Neo4j Graph Investigation</h2>
+
+            <canvas id="graphCanvas"></canvas>
+
+            <div class="graph-info">
+                Showing the strongest graph connections for the selected actor.
+                The center node is the investigated actor.
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- ATTRIBUTION -->
+    <div class="card evidence">
+
+        <h2>Actor Attribution</h2>
+
+        <p class="small">
+            Compare two actors using graph evidence such as aliases,
+            shared infrastructure and shared PGP identifiers.
+        </p>
+
+        <div class="attribution-controls">
+
+            <select id="actorOneSelect">
+                <option value="">Actor 1</option>
+            </select>
+
+            <select id="actorTwoSelect">
+                <option value="">Actor 2</option>
+            </select>
+
+            <button onclick="calculateAttribution()">
+                CALCULATE ATTRIBUTION
+            </button>
+
+        </div>
+
+        <div id="attributionResult" class="evidence-box">
+            Select two actors and calculate their association.
+        </div>
+
+    </div>
+
+</div>
+
+
+<script>
+
+const API_BASE = "http://127.0.0.1:8000";
+
+let actors = [];
+let graphConnections = [];
+
+
+// ------------------------------------------------------------
+// LOAD ACTORS
+// ------------------------------------------------------------
+
+async function loadActors() {
+
+    const actorSelect =
+        document.getElementById("actorSelect");
+
+    const actorOneSelect =
+        document.getElementById("actorOneSelect");
+
+    const actorTwoSelect =
+        document.getElementById("actorTwoSelect");
+
+    const status =
+        document.getElementById("status");
+
+    try {
+
+        const response = await fetch(
+            `${API_BASE}/actors`
+        );
+
+        if (!response.ok) {
+            throw new Error("Unable to load actors.");
+        }
+
+        const data = await response.json();
+
+        actors = data.actors;
+
+        actorSelect.innerHTML = "";
+        actorOneSelect.innerHTML = "";
+        actorTwoSelect.innerHTML = "";
+
+        actors.forEach(actor => {
+
+            const option1 =
+                document.createElement("option");
+
+            option1.value = actor.actor_id;
+            option1.textContent = actor.actor_id;
+
+            actorSelect.appendChild(option1);
+
+
+            const option2 =
+                document.createElement("option");
+
+            option2.value = actor.actor_id;
+            option2.textContent = actor.actor_id;
+
+            actorOneSelect.appendChild(option2);
+
+
+            const option3 =
+                document.createElement("option");
+
+            option3.value = actor.actor_id;
+            option3.textContent = actor.actor_id;
+
+            actorTwoSelect.appendChild(option3);
+
+        });
+
+        // Default attribution pair
+        actorOneSelect.value = "ACT_0001";
+        actorTwoSelect.value = "ACT_0017";
+
+        status.textContent =
+            `${data.count} actors loaded successfully.`;
+
+    } catch (error) {
+
+        status.textContent =
+            "Backend connection failed.";
+
+        status.classList.add("error");
+
+        console.error(error);
+    }
+}
+
+
+// ------------------------------------------------------------
+// INVESTIGATE ACTOR
+// ------------------------------------------------------------
+
+async function investigateActor() {
+
+    const actorId =
+        document.getElementById("actorSelect").value;
+
+    if (!actorId) {
+        return;
+    }
+
+    const status =
+        document.getElementById("status");
+
+    status.textContent =
+        `Investigating ${actorId}...`;
+
+    status.classList.remove("error");
+
+    try {
+
+        // Get actor summary
+        const summaryResponse = await fetch(
+            `${API_BASE}/actors/${actorId}/summary`
+        );
+
+        if (!summaryResponse.ok) {
+            throw new Error("Actor summary failed.");
+        }
+
+        const summary =
+            await summaryResponse.json();
+
+
+        // Get graph
+        const graphResponse = await fetch(
+            `${API_BASE}/actors/${actorId}/graph`
+        );
+
+        if (!graphResponse.ok) {
+            throw new Error("Actor graph failed.");
+        }
+
+        const graph =
+            await graphResponse.json();
+
+
+        // Update profile
+        document.getElementById("actorId").textContent =
+            summary.actor_id;
+
+        document.getElementById("connectedEntities").textContent =
+            summary.connected_entities;
+
+        document.getElementById("relationshipCount").textContent =
+            summary.relationship_count;
+
+        document.getElementById("relationshipTypes").innerHTML =
+            summary.relationship_types
+                .map(type => `<div>${type}</div>`)
+                .join("");
+
+
+        graphConnections =
+            graph.connections || [];
+
+
+        drawGraph(
+            actorId,
+            graphConnections
+        );
+
+
+        status.textContent =
+            `Investigation loaded for ${actorId}.`;
+
+    } catch (error) {
+
+        status.textContent =
+            "Unable to investigate actor.";
+
+        status.classList.add("error");
+
+        console.error(error);
+    }
+}
+
+
+// ------------------------------------------------------------
+// DRAW GRAPH
+// ------------------------------------------------------------
+
+function drawGraph(actorId, connections) {
+
+    const canvas =
+        document.getElementById("graphCanvas");
+
+    const ctx =
+        canvas.getContext("2d");
+
+
+    // Make canvas match its visible size
+    const rect =
+        canvas.getBoundingClientRect();
+
+    const dpr =
+        window.devicePixelRatio || 1;
+
+    canvas.width =
+        rect.width * dpr;
+
+    canvas.height =
+        rect.height * dpr;
+
+    ctx.scale(dpr, dpr);
+
+
+    const width =
+        rect.width;
+
+    const height =
+        rect.height;
+
+
+    ctx.clearRect(
+        0,
+        0,
+        width,
+        height
+    );
+
+
+    // --------------------------------------------------------
+    // Keep only strongest connections for readable visualization
+    // --------------------------------------------------------
+
+    const sortedConnections =
+        [...connections]
+            .sort(
+                (a, b) =>
+                    (b.confidence || 0)
+                    -
+                    (a.confidence || 0)
+            )
+            .slice(0, 30);
+
+
+    // Remove duplicate connected entities
+    const uniqueNodes =
+        new Map();
+
+    sortedConnections.forEach(connection => {
+
+        if (!connection.connected_id) {
+            return;
+        }
+
+        const key =
+            `${connection.connected_type}:${connection.connected_id}`;
+
+        if (!uniqueNodes.has(key)) {
+
+            uniqueNodes.set(
+                key,
+                {
+                    id: connection.connected_id,
+                    type: connection.connected_type,
+                    relationship: connection.relationship,
+                    confidence: connection.confidence || 0
+                }
+            );
+
+        }
+
+    });
+
+
+    const nodes =
+        Array.from(uniqueNodes.values());
+
+
+    // --------------------------------------------------------
+    // Center actor
+    // --------------------------------------------------------
+
+    const centerX =
+        width / 2;
+
+    const centerY =
+        height / 2;
+
+
+    // --------------------------------------------------------
+    // Draw connections
+    // --------------------------------------------------------
+
+    nodes.forEach((node, index) => {
+
+        const angle =
+            (Math.PI * 2 * index) /
+            nodes.length;
+
+        const radius =
+            Math.min(
+                width,
+                height
+            ) * 0.34;
+
+        const x =
+            centerX +
+            Math.cos(angle) * radius;
+
+        const y =
+            centerY +
+            Math.sin(angle) * radius;
+
+
+        node.x = x;
+        node.y = y;
+
+
+        // Line
+        ctx.beginPath();
+
+        ctx.moveTo(
+            centerX,
+            centerY
+        );
+
+        ctx.lineTo(
+            x,
+            y
+        );
+
+        ctx.strokeStyle =
+            "#374151";
+
+        ctx.lineWidth =
+            1;
+
+        ctx.stroke();
+
+
+        // Node
+        ctx.beginPath();
+
+        ctx.arc(
+            x,
+            y,
+            9,
+            0,
+            Math.PI * 2
+        );
+
+        ctx.fillStyle =
+            node.confidence >= 0.75
+                ? "#22c55e"
+                : node.confidence >= 0.50
+                    ? "#f59e0b"
+                    : "#64748b";
+
+        ctx.fill();
+
+
+        // Label
+        ctx.fillStyle =
+            "#d1d5db";
+
+        ctx.font =
+            "11px Arial";
+
+        ctx.textAlign =
+            "center";
+
+        ctx.fillText(
+            node.id,
+            x,
+            y + 24
+        );
+
+
+        // Relationship
+        ctx.fillStyle =
+            "#6b7280";
+
+        ctx.font =
+            "9px Arial";
+
+        ctx.fillText(
+            node.relationship,
+            x,
+            y + 37
+        );
+
+    });
+
+
+    // --------------------------------------------------------
+    // Center actor node
+    // --------------------------------------------------------
+
+    ctx.beginPath();
+
+    ctx.arc(
+        centerX,
+        centerY,
+        28,
+        0,
+        Math.PI * 2
+    );
+
+    ctx.fillStyle =
+        "#2563eb";
+
+    ctx.fill();
+
+
+    ctx.strokeStyle =
+        "#93c5fd";
+
+    ctx.lineWidth =
+        3;
+
+    ctx.stroke();
+
+
+    ctx.fillStyle =
+        "#ffffff";
+
+    ctx.font =
+        "bold 13px Arial";
+
+    ctx.textAlign =
+        "center";
+
+    ctx.fillText(
+        actorId,
+        centerX,
+        centerY + 5
+    );
+
+
+    // --------------------------------------------------------
+    // Empty state
+    // --------------------------------------------------------
+
+    if (nodes.length === 0) {
+
+        ctx.fillStyle =
+            "#9ca3af";
+
+        ctx.font =
+            "15px Arial";
+
+        ctx.fillText(
+            "No graph connections found.",
+            centerX,
+            height / 2 + 60
+        );
+
+    }
+
+}
+
+
+// ------------------------------------------------------------
+// ATTRIBUTION
+// ------------------------------------------------------------
+
+async function calculateAttribution() {
+
+    const actorOne =
+        document.getElementById(
+            "actorOneSelect"
+        ).value;
+
+    const actorTwo =
+        document.getElementById(
+            "actorTwoSelect"
+        ).value;
+
+
+    const resultBox =
+        document.getElementById(
+            "attributionResult"
+        );
+
+
+    if (!actorOne || !actorTwo) {
+
+        resultBox.innerHTML =
+            "Please select two actors.";
+
+        return;
+    }
+
+
+    if (actorOne === actorTwo) {
+
+        resultBox.innerHTML =
+            "Please select two different actors.";
+
+        return;
+    }
+
+
+    resultBox.innerHTML =
+        "Calculating attribution...";
+
+
+    try {
+
+        const response = await fetch(
+            `${API_BASE}/attribution/${actorOne}/${actorTwo}`
+        );
+
+
+        if (!response.ok) {
+
+            const errorData =
+                await response.json();
+
+            throw new Error(
+                errorData.detail ||
+                "Attribution calculation failed."
+            );
+        }
+
+
+        const data =
+            await response.json();
+
+
+        const scorePercent =
+            Math.round(
+                data.association_score * 100
+            );
+
+
+        const levelClass =
+            data.evidence_level === "HIGH"
+                ? "high"
+                : data.evidence_level === "MEDIUM"
+                    ? "medium"
+                    : "low";
+
+
+        const directEvidence =
+            data.direct_evidence
+                .map(evidence => `
+                    <div class="evidence-row">
+                        <span>
+                            ${evidence.relationship}
+                        </span>
+
+                        <strong>
+                            ${evidence.confidence}
+                        </strong>
+                    </div>
+                `)
+                .join("");
+
+
+        const sharedPgp =
+            data.shared_pgp.length > 0
+                ? data.shared_pgp.join(", ")
+                : "None";
+
+
+        resultBox.innerHTML = `
+
+            <div class="small">
+                ${data.actor_1} ↔ ${data.actor_2}
+            </div>
+
+            <div class="score ${levelClass}">
+                ${scorePercent}%
+            </div>
+
+            <div>
+                Evidence level:
+                <strong class="${levelClass}">
+                    ${data.evidence_level}
+                </strong>
+            </div>
+
+            <br>
+
+            <div class="evidence-row">
+                <span>Raw evidence score</span>
+                <strong>
+                    ${data.raw_score}
+                </strong>
+            </div>
+
+            <div class="evidence-row">
+                <span>Evidence count</span>
+                <strong>
+                    ${data.evidence_count}
+                </strong>
+            </div>
+
+            ${directEvidence}
+
+            <div class="evidence-row">
+                <span>Shared PGP</span>
+                <strong>
+                    ${sharedPgp}
+                </strong>
+            </div>
+
+            <br>
+
+            <div class="small">
+                This is a heuristic association score,
+                not a calibrated probability.
+            </div>
+
+        `;
+
+    } catch (error) {
+
+        resultBox.innerHTML = `
+            <div class="error">
+                ${error.message}
+            </div>
+        `;
+
+        console.error(error);
+    }
+
+}
+
+
+// ------------------------------------------------------------
+// START APPLICATION
+// ------------------------------------------------------------
+
+loadActors();
+
+</script>
+
+</body>
+</html>
