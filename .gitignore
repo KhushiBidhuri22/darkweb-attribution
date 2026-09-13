@@ -17,3 +17,6 @@ postgres_data/
 .pytest_cache/
 .vscode/
 .idea/
+
+artifacts/
+notebooks/
