@@ -1,14 +1,14 @@
 from fastapi import FastAPI
+from .api import graph
 from .database import init_db
 from . import models
 from .routers import actors, posts, internal  
-from .routers import actors, posts, internal, search, graph, export
+from .routers import actors, posts, internal, search, export
 from .routers import (
     actors,
     posts,
     internal,
     search,
-    graph,
     export,
     timeline,
 )
@@ -17,7 +17,6 @@ from .routers import (
     posts,
     internal,
     search,
-    graph,
     export,
     timeline,
     attribution,
@@ -28,7 +27,6 @@ from .routers import (
     posts,
     internal,
     search,
-    graph,
     export,
     timeline,
     attribution,
@@ -36,6 +34,10 @@ from .routers import (
 )
 
 from .routers import attribution
+
+from .api.graph import router as graph_router
+
+
 
 
 app = FastAPI(title="Darkweb Attribution API")
@@ -47,6 +49,8 @@ app.include_router(attribution.router)
 app.include_router(ml.router)
 
 app.include_router(attribution.router)
+
+app.include_router(graph_router)
 
 @app.on_event("startup")
 def on_startup():
