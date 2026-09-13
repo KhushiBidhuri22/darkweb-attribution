@@ -1,0 +1,30 @@
+{
+  "fixture": "collector/fixtures/marketplace_vendor_01.html",
+  "ok": true,
+  "observation": {
+    "observation_id": "OBS_bb03360c27858e5f",
+    "source_id": "marketplace_vendor_01",
+    "timestamp": "2025-08-02T09:15:00Z",
+    "observation_type": "migration_signal",
+    "confidence": 0.95,
+    "actor_id": null,
+    "handle": "NightLedger",
+    "content": "Formerly known as ShadowLedger, now operating under this profile only. Payments accepted via WALLET_SYN_0104. PGP fingerprint PGP_SYN_A031 also listed here for buyers who verified the old profile. Contact alias registered at ops0104@example.invalid for order questions.",
+    "pgp_key": "PGP_SYN_A031",
+    "wallet_address": "WALLET_SYN_0104",
+    "domain": "synthetic-source.local",
+    "url": "https://synthetic-source.local/fixtures/marketplace_vendor_01.html",
+    "category": "vendor_profile",
+    "language": "en",
+    "first_seen": "2025-08-02T09:15:00Z",
+    "last_seen": "2025-08-02T09:15:00Z"
+  },
+  "validation": {
+    "is_valid": true,
+    "errors": [],
+    "warnings": []
+  },
+  "error": null,
+  "source_id": "marketplace_vendor_01",
+  "adapter": "marketplace"
+}

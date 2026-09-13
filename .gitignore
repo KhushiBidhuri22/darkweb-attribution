@@ -1,0 +1,32 @@
+# --- Environment / secrets (none exist yet, but reserved) ---
+.env
+*.env
+*.key
+*.pem
+secrets/
+
+# --- Python ---
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+env/
+*.egg-info/
+
+# --- Logs / local run output ---
+*.log
+/out.json
+/tmp_output/
+
+# --- Editor / OS junk ---
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# --- Explicitly NOT ignored (documented so nobody "helpfully" adds them) ---
+# collector/            -- committed: this is the actual module
+# collector/fixtures/   -- committed: synthetic, non-sensitive demo data
+# docs/                 -- committed
+# examples/             -- committed
