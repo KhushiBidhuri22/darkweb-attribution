@@ -1,15 +1,9 @@
 import json
-<<<<<<< HEAD
-from pathlib import Path
-
-import pandas as pd
-=======
 import os
 from pathlib import Path
 
 import pandas as pd
 from dotenv import load_dotenv
->>>>>>> origin/feature/komal-graph-database
 from sqlalchemy import create_engine, inspect, text
 from sqlalchemy.dialects.postgresql import JSONB
 
@@ -21,13 +15,6 @@ from sqlalchemy.dialects.postgresql import JSONB
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 DATA_DIR = PROJECT_ROOT / "data" / "raw"
 
-<<<<<<< HEAD
-# IMPORTANT:
-# Keep the password that is currently working on your machine.
-DATABASE_URL = (
-    "postgresql+psycopg://"
-    "sih_user:sih_password@localhost:5432/sih_darkweb"
-=======
 # Load credentials from the project-root .env file.
 load_dotenv(PROJECT_ROOT / ".env")
 
@@ -36,43 +23,17 @@ load_dotenv(PROJECT_ROOT / ".env")
 # DATABASE CONFIGURATION
 # ============================================================
 
-POSTGRES_HOST = os.getenv(
-    "POSTGRES_HOST",
-    "localhost",
-)
-
-POSTGRES_PORT = os.getenv(
-    "POSTGRES_PORT",
-    "5432",
-)
-
-POSTGRES_DB = os.getenv(
-    "POSTGRES_DB",
-    "sih_darkweb",
-)
-
-POSTGRES_USER = os.getenv(
-    "POSTGRES_USER",
-    "sih_user",
-)
-
-POSTGRES_PASSWORD = os.getenv(
-    "POSTGRES_PASSWORD",
-)
-
-if not POSTGRES_PASSWORD:
-    raise RuntimeError(
-        "POSTGRES_PASSWORD is not set. "
-        "Check the project-root .env file."
-    )
-
+POSTGRES_HOST = os.getenv("POSTGRES_HOST", "localhost")
+POSTGRES_PORT = os.getenv("POSTGRES_PORT", "5432")
+POSTGRES_DB = os.getenv("POSTGRES_DB", "sih_darkweb")
+POSTGRES_USER = os.getenv("POSTGRES_USER", "sih_user")
+POSTGRES_PASSWORD = os.getenv("POSTGRES_PASSWORD", "sih_password")
 
 DATABASE_URL = (
     "postgresql+psycopg://"
     f"{POSTGRES_USER}:{POSTGRES_PASSWORD}@"
     f"{POSTGRES_HOST}:{POSTGRES_PORT}/"
     f"{POSTGRES_DB}"
->>>>>>> origin/feature/komal-graph-database
 )
 
 engine = create_engine(
@@ -418,10 +379,6 @@ def handle_legacy_columns(
             "timestamp"
         ]
 
-<<<<<<< HEAD
-=======
-
->>>>>>> origin/feature/komal-graph-database
     return df
 
 
@@ -435,10 +392,6 @@ def load_table(
 ):
 
     print()
-<<<<<<< HEAD
-=======
-
->>>>>>> origin/feature/komal-graph-database
     print(
         f"Loading {filename} → {table_name}"
     )
@@ -545,10 +498,6 @@ def load_table(
 def reset_tables():
 
     print()
-<<<<<<< HEAD
-=======
-
->>>>>>> origin/feature/komal-graph-database
     print(
         "Resetting existing table data..."
     )
@@ -591,10 +540,6 @@ def reset_tables():
 def test_connection():
 
     print()
-<<<<<<< HEAD
-=======
-
->>>>>>> origin/feature/komal-graph-database
     print(
         "Testing PostgreSQL connection..."
     )
@@ -621,10 +566,6 @@ def test_connection():
 def verify_counts():
 
     print()
-<<<<<<< HEAD
-=======
-
->>>>>>> origin/feature/komal-graph-database
     print(
         "=" * 70
     )
@@ -694,14 +635,9 @@ def main():
     print(
         "Database: "
         "postgresql+psycopg://"
-<<<<<<< HEAD
-        "sih_user:********@localhost:5432/"
-        "sih_darkweb"
-=======
         f"{POSTGRES_USER}:********@"
         f"{POSTGRES_HOST}:{POSTGRES_PORT}/"
         f"{POSTGRES_DB}"
->>>>>>> origin/feature/komal-graph-database
     )
 
 

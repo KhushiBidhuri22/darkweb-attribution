@@ -1,45 +1,30 @@
-<<<<<<< HEAD
+import os
 from datetime import date, datetime
 from decimal import Decimal
 from typing import Any
 
+from dotenv import load_dotenv
 import psycopg
 from neo4j import GraphDatabase
-=======
-﻿from datetime import date, datetime
-from decimal import Decimal
-from typing import Any os
 
-from dotenv import load_dotenv psycopg
-from neo4j import GraphDatabase
-()
->>>>>>> origin/feature/komal-graph-database
-
+load_dotenv()
 
 # ============================================================
 # CONFIG
 # ============================================================
 
-POSTGRES_HOST = "localhost"
-POSTGRES_PORT = 5432
-POSTGRES_DB = "sih_darkweb"
-POSTGRES_USER = "sih_user"
-<<<<<<< HEAD
-POSTGRES_PASSWORD = "sih_password"
+POSTGRES_HOST = os.getenv("POSTGRES_HOST", "localhost")
+POSTGRES_PORT = int(os.getenv("POSTGRES_PORT", "5432"))
+POSTGRES_DB = os.getenv("POSTGRES_DB", "sih_darkweb")
+POSTGRES_USER = os.getenv("POSTGRES_USER", "sih_user")
+POSTGRES_PASSWORD = os.getenv("POSTGRES_PASSWORD", "sih_password")
 
-NEO4J_URI = "bolt://localhost:7687"
-NEO4J_USER = "neo4j"
-NEO4J_PASSWORD = "sih_password"
-=======
-POSTGRES_PASSWORD = os.getenv("POSTGRES_PASSWORD")
+NEO4J_URI = os.getenv("NEO4J_URI", "bolt://localhost:7687")
+NEO4J_USER = os.getenv("NEO4J_USER", "neo4j")
+NEO4J_PASSWORD = os.getenv("NEO4J_PASSWORD", "sih_password")
+NEO4J_DATABASE = os.getenv("NEO4J_DATABASE", "neo4j")
 
-NEO4J_URI = "bolt://localhost:7687"
-NEO4J_USER = "neo4j"
-NEO4J_PASSWORD = os.getenv("NEO4J_PASSWORD")
->>>>>>> origin/feature/komal-graph-database
-NEO4J_DATABASE = "neo4j"
-
-BATCH_SIZE = 1000
+BATCH_SIZE = int(os.getenv("NEO4J_BATCH_SIZE", "1000"))
 
 
 # ============================================================
@@ -1292,8 +1277,4 @@ def main():
 
 
 if __name__ == "__main__":
-<<<<<<< HEAD
     main()
-=======
-    main()
->>>>>>> origin/feature/komal-graph-database
