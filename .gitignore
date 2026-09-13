@@ -1,18 +1,31 @@
+<<<<<<< HEAD
 
+=======
+# Python virtual environment
+>>>>>>> origin/feature/komal-graph-database
 .venv/
 venv/
 env/
 
+<<<<<<< HEAD
 
+=======
+# Python cache
+>>>>>>> origin/feature/komal-graph-database
 __pycache__/
 *.py[cod]
 *$py.class
 
+<<<<<<< HEAD
 
+=======
+# Environment / secrets
+>>>>>>> origin/feature/komal-graph-database
 .env
 .env.*
 !.env.example
 
+<<<<<<< HEAD
 .vscode/
 .idea/
 
@@ -32,10 +45,40 @@ build/
 *.sqlite
 *.db
 
+=======
+# IDE files
+.vscode/
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Temporary files
+*.tmp
+*.temp
+
+# Node/frontend dependencies if added later
+node_modules/
+
+# Build/output folders
+dist/
+build/
+
+# Database local files
+*.sqlite
+*.db
+
+# Python tooling
+>>>>>>> origin/feature/komal-graph-database
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
 
+<<<<<<< HEAD
 .ipynb_checkpoints/
 
 *.db
@@ -45,3 +88,7 @@ __pycache__/
 .env
 artifacts/
 notebooks/
+=======
+# Jupyter
+.ipynb_checkpoints/
+>>>>>>> origin/feature/komal-graph-database
