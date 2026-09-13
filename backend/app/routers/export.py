@@ -1,106 +1,90 @@
 import csv
 import io
-
-from fastapi import APIRouter, Depends
+import json
+from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
 from ..database import get_db
+from ..services.actor_service import get_actor_detail
 from ..models import Actor
 
 router = APIRouter(prefix="/export", tags=["export"])
 
 
-def actor_to_dict(actor):
-    return {
-        "id": actor.id,
-        "primary_handle": actor.primary_handle,
-        "confidence": actor.confidence,
-        "last_seen": (
-            actor.last_seen.isoformat()
-            if actor.last_seen
-            else None
-        ),
-        "identifiers": [
-            {
-                "id": identifier.id,
-                "type": identifier.type,
-                "value": identifier.value,
-            }
-            for identifier in actor.identifiers
-        ],
-    }
-
-
-@router.get("/actors")
-def export_actors_csv(db: Session = Depends(get_db)):
+@router.get("/{actor_id}")
+def export_actor(
+    actor_id: str,
+    format: str = Query("json", description="Export format: csv or json"),
+    db: Session = Depends(get_db),
+):
     """
-    Export all actors and their basic information as CSV.
+    Export full actor intelligence dossier in CSV or JSON format.
     """
-    actors = db.query(Actor).all()
+    actor_data = get_actor_detail(actor_id=actor_id, db=db)
+    if not actor_data:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Actor '{actor_id}' not found.",
+        )
 
+    if format.lower() == "json":
+        json_content = json.dumps(actor_data, indent=2)
+        return Response(
+            content=json_content,
+            media_type="application/json",
+            headers={
+                "Content-Disposition": f'attachment; filename="{actor_id}_intelligence_dossier.json"'
+            },
+        )
+
+    # CSV Format
     output = io.StringIO()
     writer = csv.writer(output)
 
-    writer.writerow([
-        "id",
-        "primary_handle",
-        "confidence",
-        "last_seen",
-        "identifier_count",
-    ])
+    writer.writerow(["SECTION", "FIELD_1", "FIELD_2", "FIELD_3", "FIELD_4", "FIELD_5"])
 
-    for actor in actors:
-        writer.writerow([
-            actor.id,
-            actor.primary_handle,
-            actor.confidence,
-            actor.last_seen.isoformat() if actor.last_seen else "",
-            len(actor.identifiers),
-        ])
+    # Actor Overview
+    writer.writerow(["PROFILE", "Actor ID", actor_data["id"], "Primary Handle", actor_data["handle"], ""])
+    writer.writerow(["PROFILE", "Confidence", actor_data["confidence"], "Priority", actor_data["priority"], ""])
+    writer.writerow(["PROFILE", "First Seen", actor_data["firstSeen"], "Last Seen", actor_data["lastSeen"], ""])
+    writer.writerow([])
+
+    # Aliases
+    writer.writerow(["ALIASES", "ID", "Handle", "Detail", "Confidence", ""])
+    for a in actor_data.get("aliases", []):
+        writer.writerow(["ALIAS", a.get("id"), a.get("handle"), a.get("detail"), a.get("confidence")])
+    writer.writerow([])
+
+    # Signing Keys
+    writer.writerow(["KEYS", "ID", "Title", "Algorithm", "Fingerprint / Value", "Source"])
+    for k in actor_data.get("keys", []):
+        writer.writerow(["KEY", k.get("id"), k.get("title"), k.get("algorithm"), k.get("value"), k.get("source")])
+    writer.writerow([])
+
+    # Wallets
+    writer.writerow(["WALLETS", "ID", "Title", "Network", "Address / Value", "Source"])
+    for w in actor_data.get("wallets", []):
+        writer.writerow(["WALLET", w.get("id"), w.get("title"), w.get("network"), w.get("value"), w.get("source")])
+    writer.writerow([])
+
+    # Evidence
+    writer.writerow(["EVIDENCE", "ID", "Title", "Method", "Detail", "Confidence"])
+    for e in actor_data.get("evidence", []):
+        writer.writerow(["EVIDENCE", e.get("id"), e.get("title"), e.get("method"), e.get("detail"), e.get("confidence")])
+    writer.writerow([])
+
+    # Sources
+    writer.writerow(["SOURCES", "ID", "Source Name", "Detail", "Observed Date", "URL"])
+    for s in actor_data.get("sources", []):
+        writer.writerow(["SOURCE", s.get("id"), s.get("name") or s.get("title"), s.get("detail"), s.get("observedAt") or s.get("date"), s.get("url")])
 
     output.seek(0)
-
     return StreamingResponse(
         iter([output.getvalue()]),
         media_type="text/csv",
         headers={
-            "Content-Disposition": "attachment; filename=actors.csv"
+            "Content-Disposition": f'attachment; filename="{actor_id}_intelligence_dossier.csv"',
+            "Access-Control-Expose-Headers": "Content-Disposition",
         },
     )
-
-
-@router.get("/actors/json")
-def export_actors_json(db: Session = Depends(get_db)):
-    """
-    Export all actors and identifiers as JSON.
-    """
-    actors = db.query(Actor).all()
-    return [actor_to_dict(actor) for actor in actors]
-
-
-@router.get("/actors/{actor_id}/report")
-def export_actor_report(actor_id: int, db: Session = Depends(get_db)):
-    """
-    Return a structured report for one actor.
-    """
-    actor = (
-        db.query(Actor)
-        .filter(Actor.id == actor_id)
-        .first()
-    )
-
-    if not actor:
-        return {
-            "error": "Actor not found",
-            "actor_id": actor_id,
-        }
-
-    return {
-        "report_type": "actor_intelligence_report",
-        "actor": actor_to_dict(actor),
-        "note": (
-            "This report is based on synthetic or authorized "
-            "threat-intelligence data."
-        ),
-    }

@@ -1,49 +1,58 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
+
 from ..database import get_db
-from ..models import Actor, Identifier
-from ..schemas import ActorCreate, Actor as ActorSchema
+from ..models import Actor
+from ..schemas import ActorDetailResponse, ActorSummary
+from ..services.actor_service import get_actor_detail
+from ...graph_api import get_actor_summary
 
 router = APIRouter(prefix="/actors", tags=["actors"])
 
-@router.post("", response_model=ActorSchema)
-def create_actor(actor: ActorCreate, db: Session = Depends(get_db)):
-    """
-    Create a new actor with optional identifiers.
-    """
-    db_actor = Actor(
-        primary_handle=actor.primary_handle,
-    )
-    db.add(db_actor)
-    db.commit()
-    db.refresh(db_actor)
 
-    # If identifiers were provided, create them
-    if actor.identifiers:
-        for ident_data in actor.identifiers:
-            ident = Identifier(
-                type=ident_data.type,
-                value=ident_data.value,
-                actor_id=db_actor.id,
-            )
-            db.add(ident)
-        db.commit()
-
-    return db_actor
-
-@router.get("", response_model=list[ActorSchema])
+@router.get("", response_model=list[ActorSummary])
 def list_actors(db: Session = Depends(get_db)):
     """
-    List all actors.
+    List all threat actors in the platform.
     """
-    return db.query(Actor).all()
+    actors = db.query(Actor).order_by(Actor.actor_id.asc()).all()
+    results = []
+    for a in actors:
+        results.append({
+            "id": a.actor_id,
+            "handle": a.actor_id,
+            "description": f"Synthetic Threat Actor {a.actor_id}",
+            "priority": "Active Review",
+            "confidence": 85.0,
+            "firstSeen": a.created_at.isoformat() if a.created_at else None,
+            "lastSeen": None,
+        })
+    return results
 
-@router.get("/{actor_id}", response_model=ActorSchema)
-def get_actor(actor_id: int, db: Session = Depends(get_db)):
+
+@router.get("/{actor_id}", response_model=ActorDetailResponse)
+def get_actor_workspace(actor_id: str, db: Session = Depends(get_db)):
     """
-    Get a single actor by ID with its identifiers.
+    Retrieve full actor dossier, 6 record chapters, and 3D graph representation.
     """
-    actor = db.query(Actor).filter(Actor.id == actor_id).first()
-    if not actor:
-        raise HTTPException(status_code=404, detail="Actor not found")
-    return actor
+    actor_data = get_actor_detail(actor_id=actor_id, db=db)
+    if not actor_data:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Actor '{actor_id}' not found.",
+        )
+    return {"actor": actor_data}
+
+
+@router.get("/{actor_id}/summary")
+def get_actor_neo4j_summary(actor_id: str):
+    """
+    Retrieve compact Neo4j investigation summary for an actor.
+    """
+    summary = get_actor_summary(actor_id)
+    if summary is None or summary.get("actor_id") is None:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Actor {actor_id} not found in graph.",
+        )
+    return summary

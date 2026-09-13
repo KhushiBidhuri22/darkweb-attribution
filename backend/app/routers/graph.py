@@ -1,47 +1,23 @@
-from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
+from fastapi import APIRouter, HTTPException
+from ...graph_api import get_actor_graph
 
-from ..database import get_db
-from ..models import Actor, Identifier
-
-router = APIRouter(prefix="/graph", tags=["graph"])
+router = APIRouter(prefix="/actors", tags=["graph"])
 
 
-@router.get("/{actor_id}")
-def get_actor_graph(actor_id: int, db: Session = Depends(get_db)):
-    
-    actor = db.query(Actor).filter(Actor.id == actor_id).first()
-    if not actor:
-        raise HTTPException(status_code=404, detail="Actor not found")
-
-    nodes = [
-        {
-            "id": f"actor_{actor.id}",
-            "type": "actor",
-            "label": actor.primary_handle,
-        }
-    ]
-    edges = []
-
-    for ident in actor.identifiers:
-        node_id = f"ident_{ident.id}"
-        nodes.append(
-            {
-                "id": node_id,
-                "type": ident.type,
-                "label": ident.value,
-            }
-        )
-        edges.append(
-            {
-                "from": f"actor_{actor.id}",
-                "to": node_id,
-                "relation": ident.type,
-            }
+@router.get("/{actor_id}/graph")
+def get_graph(actor_id: str):
+    """
+    Return Neo4j directly connected graph entities and relationships for an actor.
+    """
+    records = get_actor_graph(actor_id)
+    if not records:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Actor '{actor_id}' not found in the graph.",
         )
 
     return {
-        "actor_id": actor.id,
-        "nodes": nodes,
-        "edges": edges,
+        "actor_id": actor_id,
+        "connection_count": len(records),
+        "connections": records,
     }

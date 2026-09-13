@@ -2,65 +2,48 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from ..database import get_db
-from ..models import Actor, Post
+from ..models import ActivityTimeline, Actor
 
 router = APIRouter(prefix="/actors", tags=["timeline"])
 
 
 @router.get("/{actor_id}/timeline")
 def get_actor_timeline(
-    actor_id: int,
+    actor_id: str,
     db: Session = Depends(get_db),
 ):
     """
-    Return chronological observations for an actor.
+    Return chronological activity events and observations for an actor.
     """
-    actor = (
-        db.query(Actor)
-        .filter(Actor.id == actor_id)
-        .first()
-    )
-
+    actor = db.query(Actor).filter(Actor.actor_id == actor_id).first()
     if not actor:
         raise HTTPException(
             status_code=404,
-            detail="Actor not found",
+            detail=f"Actor '{actor_id}' not found.",
         )
 
-    posts = (
-        db.query(Post)
-        .filter(Post.handle == actor.primary_handle)
-        .order_by(Post.timestamp.asc())
+    timeline_events = (
+        db.query(ActivityTimeline)
+        .filter(ActivityTimeline.actor_id == actor_id)
+        .order_by(ActivityTimeline.event_timestamp.asc())
         .all()
     )
 
     events = []
-
-    for post in posts:
-        text = post.text or ""
-
+    for e in timeline_events:
         events.append({
-            "post_id": post.id,
-            "timestamp": (
-                post.timestamp.isoformat()
-                if post.timestamp
-                else None
-            ),
-            "type": "observation",
-            "source": post.source,
-            "handle": post.handle,
-            "summary": (
-                text[:160] + "..."
-                if len(text) > 160
-                else text
-            ),
-            "has_pgp_key": bool(post.pgp_key),
-            "has_wallet": bool(post.wallet),
+            "event_id": e.event_id,
+            "timestamp": e.event_timestamp.isoformat() if e.event_timestamp else None,
+            "type": e.event_type,
+            "handle": e.handle,
+            "source_id": e.source_id,
+            "description": e.description,
+            "confidence": e.confidence,
+            "metadata": getattr(e, "event_metadata", None),
         })
 
     return {
-        "actor_id": actor.id,
-        "primary_handle": actor.primary_handle,
+        "actor_id": actor_id,
         "event_count": len(events),
         "events": events,
     }
