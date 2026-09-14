@@ -59,4 +59,9 @@ def get_db():
 
 
 def init_db():
-    pass
+    # Import models here (not at module top) to avoid circular imports,
+    # while still guaranteeing every model class is registered on Base
+    # before create_all() runs.
+    from . import models  # noqa: F401
+
+    Base.metadata.create_all(bind=engine)
