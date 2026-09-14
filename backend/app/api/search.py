@@ -293,4 +293,4 @@ def search(
                 ],
             })
 
-    return {"items": items}
+    return {"items": items}
