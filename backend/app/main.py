@@ -8,7 +8,7 @@ from .api.search import router as search_router
 from .api.actors import router as actors_router
 from .routers.export import router as export_router
 
-from .db.session import engine, Base  # adjust import path to match your project
+from .database import engine, Base, init_db
 
 
 
@@ -36,7 +36,7 @@ app.add_middleware(
 )
 @app.on_event("startup")
 def on_startup():
-    Base.metadata.create_all(bind=engine)
+    init_db()
 
 
 
