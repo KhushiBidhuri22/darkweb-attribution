@@ -8,7 +8,6 @@ from .api.actors import router as api_actors_router
 from .database import init_db
 from . import models
 from .routers import actors, posts, internal, search, export, timeline, attribution, ml
-
 app = FastAPI()
 
 app.add_middleware(
