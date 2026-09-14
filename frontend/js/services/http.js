@@ -25,7 +25,11 @@ export async function request(name, {id, query, body, method = 'GET', signal, fi
   let timedOut = false;
   const timer = setTimeout(() => { timedOut = true; controller.abort(); }, apiConfig.timeoutMs);
   try {
-    const headers = {Accept: file ? '*/*' : 'application/json', ...await getRequestHeaders()};
+    const headers = {
+      Accept: file ? '*/*' : 'application/json',
+      'Bypass-Tunnel-Reminder': 'true',
+      ...await getRequestHeaders(),
+    };
     if (body !== undefined) headers['Content-Type'] = 'application/json';
     const response = await fetch(url, {
       method, headers, credentials:apiConfig.credentials, signal:controller.signal,

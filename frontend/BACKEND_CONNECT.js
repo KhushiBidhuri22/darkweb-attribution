@@ -19,8 +19,12 @@ const isLocal = typeof window !== 'undefined' && (
   window.location.hostname === ''
 );
 
+const isTunnel = typeof window !== 'undefined' && window.location.hostname.includes('loca.lt');
+
 export const apiConfig = {
-  baseUrl: isLocal ? 'http://localhost:8000' : 'https://darkweb-attribution-1.onrender.com', // Points to local backend when run locally, or Render production backend
+  baseUrl: isLocal
+    ? 'http://localhost:8000'
+    : (isTunnel ? 'https://ripe-months-laugh.loca.lt' : 'https://darkweb-attribution-1.onrender.com'),
   credentials: 'include', // Cookie session. Backend must authorize requests.
   timeoutMs: 15000,
   endpoints: {
