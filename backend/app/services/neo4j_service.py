@@ -1,40 +1,42 @@
 import os
-from pathlib import Path
 
 from dotenv import load_dotenv
 from neo4j import GraphDatabase
 
 
-PROJECT_ROOT = (
-    Path(__file__).resolve().parents[3]
-)
+load_dotenv()
 
-ENV_PATH = PROJECT_ROOT / ".env"
 
-if not ENV_PATH.exists():
-    raise RuntimeError(
-        f".env file not found at: {ENV_PATH}"
-    )
-
-load_dotenv(
-    dotenv_path=ENV_PATH,
-    override=True,
-)
 class Neo4jService:
     def __init__(self):
-        uri = os.getenv("NEO4J_URI", "bolt://localhost:7687")
-        user = os.getenv("NEO4J_USER", "neo4j")
-        password = os.getenv("NEO4J_PASSWORD")
-        self.database = os.getenv("NEO4J_DATABASE", "neo4j")
+        uri = os.getenv(
+            "NEO4J_URI",
+            "bolt://localhost:7687",
+        )
+
+        user = os.getenv(
+            "NEO4J_USER",
+            "neo4j",
+        )
+
+        password = os.getenv(
+            "NEO4J_PASSWORD",
+        )
+
+        self.database = os.getenv(
+            "NEO4J_DATABASE",
+            "neo4j",
+        )
 
         if not password:
-            raise RuntimeError("NEO4J_PASSWORD is not configured.")
+            raise RuntimeError(
+                "NEO4J_PASSWORD is not configured."
+            )
 
         self.driver = GraphDatabase.driver(
             uri,
             auth=(user, password),
         )
-
     def verify(self):
         self.driver.verify_connectivity()
 
