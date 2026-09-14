@@ -30,12 +30,12 @@ def create_post(post: PostCreate, db: Session = Depends(get_db)):
 
 @router.get("", response_model=list[PostSchema])
 def list_posts(db: Session = Depends(get_db)):
-    return db.query(Post).order_by(Post.timestamp.desc()).all()
+    return db.query(Post).order_by(Post.event_timestamp.desc()).all()
 
 
 @router.get("/{post_id}", response_model=PostSchema)
-def get_post(post_id: int, db: Session = Depends(get_db)):
-    post = db.query(Post).filter(Post.id == post_id).first()
+def get_post(post_id: str, db: Session = Depends(get_db)):
+    post = db.query(Post).filter(Post.post_id == str(post_id)).first()
 
     if not post:
         raise HTTPException(status_code=404, detail="Post not found")

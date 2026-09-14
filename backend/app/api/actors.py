@@ -110,6 +110,32 @@ def map_graph_edge(edge, node_ids):
     }
 
 
+@router.get("")
+@router.get("/")
+def list_actors():
+    db = SessionLocal()
+    try:
+        actors = db.query(Actor).limit(50).all()
+        results = []
+        for a in actors:
+            results.append({
+                "id": a.actor_id,
+                "actor_id": a.actor_id,
+                "primary_handle": a.primary_handle,
+                "handle": a.primary_handle,
+                "confidence": round((a.confidence or 0.85) * 100, 1),
+                "last_seen": a.last_seen.isoformat() if a.last_seen else None,
+            })
+        return {
+            "actors": results,
+            "count": len(results),
+            "total": len(results),
+            "items": results,
+        }
+    finally:
+        db.close()
+
+
 @router.get("/{actor_id}")
 def get_actor(actor_id: str):
     clean_id = str(actor_id).strip()

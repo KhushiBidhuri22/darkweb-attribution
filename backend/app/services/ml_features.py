@@ -20,22 +20,22 @@ MODEL_FEATURES = [
 
 def _identifier_values(
     db: Session,
-    actor_id: int,
+    actor_id: str,
     identifier_type: str,
 ) -> set[str]:
     rows = (
         db.query(Identifier)
         .filter(
-            Identifier.actor_id == actor_id,
-            Identifier.type == identifier_type,
+            Identifier.actor_id == str(actor_id),
+            (Identifier.identifier_type == identifier_type) | (Identifier.identifier_type.ilike(f"%{identifier_type}%")),
         )
         .all()
     )
 
     return {
-        row.value
+        row.identifier_value
         for row in rows
-        if row.value
+        if row.identifier_value
     }
 
 

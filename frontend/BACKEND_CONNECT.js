@@ -13,16 +13,41 @@
  */
 
 // 1 — SERVER ADDRESS AND ENDPOINT PATHS
-const isLocal = typeof window !== 'undefined' && (
-  window.location.hostname === 'localhost' ||
-  window.location.hostname === '127.0.0.1' ||
-  window.location.hostname === ''
-);
+function resolveBaseUrl() {
+  if (typeof window === 'undefined') return 'http://localhost:8000';
+  
+  if (window.__API_BASE_URL__) return window.__API_BASE_URL__;
 
-const isTunnel = typeof window !== 'undefined' && window.location.hostname.includes('loca.lt');
+  const hostname = window.location.hostname || '';
+  const port = window.location.port || '';
+
+  // If running locally (localhost:5500, 127.0.0.1:5500, etc.)
+  if (hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '') {
+    if (port === '8000') return ''; // Served directly by backend
+    return `${window.location.protocol}//${hostname}:8000`;
+  }
+
+  // Localtunnel
+  if (hostname.includes('loca.lt')) {
+    return '';
+  }
+
+  // Render or other cloud deployment
+  if (hostname.includes('darkweb-attribution-2.onrender.com')) {
+    return '';
+  }
+
+  // If frontend is deployed on another domain/port in production
+  return 'https://darkweb-attribution-2.onrender.com';
+}
 
 export const apiConfig = {
-  baseUrl: 'https://darkweb-attribution-2.onrender.com/',
+  get baseUrl() {
+    return resolveBaseUrl();
+  },
+  set baseUrl(val) {
+    if (typeof window !== 'undefined') window.__API_BASE_URL__ = val;
+  },
   credentials: 'include', // Cookie session. Backend must authorize requests.
   timeoutMs: 15000,
   endpoints: {

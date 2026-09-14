@@ -10,6 +10,7 @@ COPY backend /app/backend
 COPY ml /app/ml
 COPY scripts /app/scripts
 COPY data /app/data
+COPY frontend /app/frontend
 
 ENV PORT=8000
 EXPOSE 8000

@@ -13,6 +13,7 @@ RUN pip install --no-cache-dir \
 
 COPY backend /app/backend
 COPY ml /app/ml
+COPY frontend /app/frontend
 
 ENV PORT=8000
 EXPOSE 8000
