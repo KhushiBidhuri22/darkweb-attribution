@@ -14,9 +14,7 @@
 
 // 1 — SERVER ADDRESS AND ENDPOINT PATHS
 export const apiConfig = {
-  baseUrl:
-  import.meta.env.VITE_API_URL ||
-  'http://localhost:8000', // Paste the actual backend origin here. No trailing slash needed.
+  baseUrl: "https://darkweb-attribution-1.onrender.com", // Paste the actual backend origin here. No trailing slash needed.
   credentials: 'include', // Cookie session. Backend must authorize requests.
   timeoutMs: 15000,
   endpoints: {
