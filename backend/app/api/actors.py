@@ -2,7 +2,7 @@ from fastapi import APIRouter, HTTPException
 
 from ..services.neo4j_service import Neo4jService
 from ..database import SessionLocal
-from ..models import Actor
+from ..models import Actor, Identifier, Post
 
 
 router = APIRouter(
