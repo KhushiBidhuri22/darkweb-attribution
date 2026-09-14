@@ -148,17 +148,25 @@ export class NetworkScene{
       if(root){c.strokeStyle=matte?'#8db69755':'#71d4a64d';c.beginPath();c.arc(x,y,radius+7,0,Math.PI*2);c.stroke();c.font=`600 ${Math.max(12,14*scale)}px "Oxanium",monospace`;c.textAlign='center';c.textBaseline='middle';c.fillStyle=matte?'#b2d0b4':'#a2dcb8';c.fillText((this.actor?.initials ?? ''),x,y+1);}
       else if(node.type==='source'){c.beginPath();c.arc(x,y,radius*.4,0,Math.PI*2);c.fillStyle='#8eb39c';c.fill();}
       c.restore();
-      c.font=`${root?'500':'400'} 14px "Oxanium",monospace`;
-      const text=node.name.length>28?node.name.slice(0,25)+'…':node.name,labelWidth=c.measureText(text).width+16;
+      c.font=`${root?'600':'400'} ${root?14:13}px "Oxanium",monospace`;
+      const text=node.name.length>24?node.name.slice(0,21)+'…':node.name,labelWidth=c.measureText(text).width+16;
       const candidates=[{x:x-labelWidth/2,y:y+radius+14},{x:x-labelWidth/2,y:y-radius-24},{x:x+radius+9,y:y},{x:x-labelWidth-radius-9,y:y}];
       const padded=candidates.map(q=>({x:Math.max(6,Math.min(w-labelWidth-6,q.x)),y:Math.min(h-24,Math.max(18,q.y)),width:labelWidth}));
       const candidate=padded.find(q=>!labelBoxes.some(b=>q.x<b.x+b.width+5&&q.x+q.width+5>b.x&&q.y-12<b.y+16&&q.y+16>b.y-12))??padded[0];
       labelBoxes.push(candidate);const lx=candidate.x,ly=candidate.y;
-      c.fillStyle=matte?(selected?'#234332f7':'#102b1fe6'):(selected?'#0b3022f2':'#041b11db');c.fillRect(lx,ly-10,labelWidth,24);
-      if(selected){c.strokeStyle=matte?'#8cae9060':'#60b99655';c.lineWidth=1;c.strokeRect(lx,ly-10,labelWidth,24);}
-      c.fillStyle=matte?(root||selected?'#a3c7ad':'#8bb09a'):(root||selected?'#8ad9bb':'#73ac96');
-      c.textAlign='left';c.textBaseline='middle';c.fillText(text,lx+8,ly+2);
-      this.projected.push({...p,radius,labelBox:{x:lx,y:ly-10,width:labelWidth}});
+      c.beginPath();
+      if (c.roundRect) c.roundRect(lx, ly-10, labelWidth, 22, 4);
+      else c.rect(lx, ly-10, labelWidth, 22);
+      c.fillStyle=matte?(selected?'#1c3e2ef0':(red?'#2f1915ea':'#0e261be6')):(selected?'#0b3022f2':(red?'#281310ee':'#041b11db'));
+      c.fill();
+      if(selected||red){
+        c.strokeStyle=selected?(red?'#e08f82':'#7edbb5'):'#8d4c4477';
+        c.lineWidth=selected?1.5:1;
+        c.stroke();
+      }
+      c.fillStyle=matte?(root||selected?'#bcedd0':(red?'#f1aba0':'#9fc7af')):(root||selected?'#99efcb':(red?'#f09c8f':'#81cbb0'));
+      c.textAlign='left';c.textBaseline='middle';c.fillText(text,lx+8,ly+1);
+      this.projected.push({...p,radius,labelBox:{x:lx,y:ly-10,width:labelWidth,height:22}});
     }
   }
 }
