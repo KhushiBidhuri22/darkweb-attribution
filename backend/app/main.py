@@ -7,6 +7,9 @@ from .api.auth import router as auth_router
 from .api.search import router as search_router
 from .api.actors import router as actors_router
 
+from .db.session import engine, Base  # adjust import path to match your project
+
+
 
 app = FastAPI(
     title="SIH Dark Web Attribution API",
@@ -20,6 +23,10 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+@app.on_event("startup")
+def on_startup():
+    Base.metadata.create_all(bind=engine)
+
 
 
 app.include_router(
