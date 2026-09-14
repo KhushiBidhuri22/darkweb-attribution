@@ -1,7 +1,10 @@
+import logging
 from typing import Any, Optional
 from sqlalchemy.orm import Session
 
 from ..models import Actor, Identifier, Post
+
+logger = logging.getLogger(__name__)
 
 
 def compute_actor_confidence(actor: Actor, db: Session) -> float:
@@ -52,21 +55,26 @@ def sync_actors_from_posts(db: Session):
             )
             db.add(ident)
 
-        for p in handle_posts:
+        for idx, p in enumerate(handle_posts):
             if p.pgp_key:
                 exists = (
                     db.query(Identifier)
                     .filter(
-                        Identifier.actor_id == actor.id,
-                        Identifier.type == "pgp_key",
-                        Identifier.value == p.pgp_key,
+                        Identifier.actor_id == actor.actor_id,
+                        Identifier.identifier_type == "pgp_key",
+                        Identifier.identifier_value == p.pgp_key,
                     )
                     .first()
                 )
                 if not exists:
-                    ident = Identifier(type="pgp_key", value=p.pgp_key, actor_id=actor.id)
+                    ident = Identifier(
+                        identifier_id=f"id_pgp_{actor.actor_id}_{idx}",
+                        identifier_type="pgp_key",
+                        identifier_value=p.pgp_key,
+                        actor_id=actor.actor_id,
+                        source_id="import",
+                    )
                     db.add(ident)
-
 
         db.flush()  # make sure new identifiers are counted before scoring
         actor.confidence = compute_actor_confidence(actor, db)
@@ -81,6 +89,7 @@ def build_actor_dossier(actor: Actor, db: Session, include_graph: bool = True) -
     resolved_id = str(actor.actor_id or actor.id)
     handle = actor.primary_handle or resolved_id
     actor_idents = actor.identifiers or []
+    actor_created_at = actor.created_at.isoformat() if actor.created_at else None
 
     # 1. Aliases (Deduplicated, Clean & Neat)
     seen_aliases = {}
@@ -97,6 +106,7 @@ def build_actor_dossier(actor: Actor, db: Session, include_graph: bool = True) -
                     "detail": f"Identifier Type: {i.identifier_type} | Source: {i.source_id}",
                     "confidence": conf,
                     "nodeId": f"node_{i.identifier_id}",
+                    "observedAt": i.last_seen.isoformat() if i.last_seen else (i.first_seen.isoformat() if i.first_seen else actor_created_at),
                 }
     aliases = sorted(seen_aliases.values(), key=lambda x: x["confidence"], reverse=True)
 
@@ -112,7 +122,7 @@ def build_actor_dossier(actor: Actor, db: Session, include_graph: bool = True) -
                 "title": f"PGP Key ({val[:12]}...)",
                 "detail": f"Observed on {i.source_id}",
                 "source": i.source_id,
-                "date": i.last_seen.isoformat() if i.last_seen else (i.first_seen.isoformat() if i.first_seen else None),
+                "date": i.last_seen.isoformat() if i.last_seen else (i.first_seen.isoformat() if i.first_seen else actor_created_at),
                 "confidence": round((i.confidence or 0.95) * 100, 1),
                 "nodeId": f"node_{i.identifier_id}",
                 "url": None,
@@ -134,7 +144,7 @@ def build_actor_dossier(actor: Actor, db: Session, include_graph: bool = True) -
                 "title": f"{net} Wallet",
                 "detail": f"Tracked on {i.source_id}",
                 "source": i.source_id,
-                "date": i.last_seen.isoformat() if i.last_seen else None,
+                "date": i.last_seen.isoformat() if i.last_seen else actor_created_at,
                 "confidence": round((i.confidence or 0.90) * 100, 1),
                 "nodeId": f"node_{i.identifier_id}",
                 "url": None,
@@ -162,14 +172,14 @@ def build_actor_dossier(actor: Actor, db: Session, include_graph: bool = True) -
                 "title": f"Intelligence Source: {row[1] or row[0]}",
                 "detail": f"Type: {row[2] or 'Darknet Forum'} | Status: Active Monitoring",
                 "source": str(row[0]),
-                "date": actor.created_at.isoformat() if actor.created_at else None,
+                "date": actor_created_at,
                 "confidence": round((float(row[4] or 0.85)) * 100, 1),
                 "nodeId": f"node_src_{row[0]}",
                 "url": row[3],
-                "observedAt": actor.created_at.isoformat() if actor.created_at else None,
+                "observedAt": actor_created_at,
             })
-    except Exception:
-        pass
+    except Exception as e:
+        logger.warning(f"Source lookup failed for actor {resolved_id}: {e}")
 
     if not sources and actor_idents:
         sources.append({
@@ -178,11 +188,11 @@ def build_actor_dossier(actor: Actor, db: Session, include_graph: bool = True) -
             "title": f"Source Feed: {actor_idents[0].source_id}",
             "detail": "Verified darknet marketplace / forum crawler ingest.",
             "source": actor_idents[0].source_id,
-            "date": actor.created_at.isoformat() if actor.created_at else None,
+            "date": actor_created_at,
             "confidence": 85.0,
             "nodeId": f"node_src_{actor_idents[0].source_id}",
             "url": None,
-            "observedAt": actor.created_at.isoformat() if actor.created_at else None,
+            "observedAt": actor_created_at,
         })
 
     # 5. Evidence
@@ -209,8 +219,8 @@ def build_actor_dossier(actor: Actor, db: Session, include_graph: bool = True) -
                 "url": None,
                 "method": "Stylometric & Behavioral Correlation",
             })
-    except Exception:
-        pass
+    except Exception as e:
+        logger.warning(f"Evidence/relationship lookup failed for actor {resolved_id}: {e}")
 
     if not evidence:
         evidence.append({
@@ -250,8 +260,8 @@ def build_actor_dossier(actor: Actor, db: Session, include_graph: bool = True) -
                 "url": None,
                 "label": row[1] or "ACTIVITY",
             })
-    except Exception:
-        pass
+    except Exception as e:
+        logger.warning(f"Timeline lookup failed for actor {resolved_id}: {e}")
 
     # 7. Graph
     graph_nodes = []
@@ -283,8 +293,8 @@ def build_actor_dossier(actor: Actor, db: Session, include_graph: bool = True) -
                         "confidence": edge.get("confidence", 85.0),
                         "observedAt": edge.get("observed_at"),
                     })
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning(f"Neo4j graph fetch failed for actor {resolved_id}: {e}")
 
         if not graph_nodes:
             main_node = {
@@ -295,7 +305,7 @@ def build_actor_dossier(actor: Actor, db: Session, include_graph: bool = True) -
                 "relation": "TARGET",
                 "detail": f"Attributed Persona ({resolved_id})",
                 "confidence": round((actor.confidence or 0.85) * 100, 1),
-                "observedAt": actor.last_seen.isoformat() if actor.last_seen else None,
+                "observedAt": actor.last_seen.isoformat() if actor.last_seen else actor_created_at,
                 "recordId": resolved_id,
             }
             graph_nodes.append(main_node)
@@ -307,7 +317,7 @@ def build_actor_dossier(actor: Actor, db: Session, include_graph: bool = True) -
                     "type": "alias",
                     "identifier": alias["handle"],
                     "confidence": alias["confidence"],
-                    "observedAt": None,
+                    "observedAt": alias.get("observedAt") or actor_created_at,
                     "recordId": alias["id"],
                 })
                 graph_edges.append({
@@ -316,6 +326,7 @@ def build_actor_dossier(actor: Actor, db: Session, include_graph: bool = True) -
                     "to": alias["id"],
                     "kind": "ALIAS_OF",
                     "confidence": alias["confidence"],
+                    "observedAt": alias.get("observedAt") or actor_created_at,
                 })
 
             for key in keys[:3]:
@@ -325,7 +336,7 @@ def build_actor_dossier(actor: Actor, db: Session, include_graph: bool = True) -
                     "type": "key",
                     "identifier": key["value"],
                     "confidence": key["confidence"],
-                    "observedAt": key["date"],
+                    "observedAt": key["date"] or actor_created_at,
                     "recordId": key["id"],
                 })
                 graph_edges.append({
@@ -334,6 +345,7 @@ def build_actor_dossier(actor: Actor, db: Session, include_graph: bool = True) -
                     "to": key["id"],
                     "kind": "USES_PGP",
                     "confidence": key["confidence"],
+                    "observedAt": key["date"] or actor_created_at,
                 })
 
             for wallet in wallets[:3]:
@@ -343,7 +355,7 @@ def build_actor_dossier(actor: Actor, db: Session, include_graph: bool = True) -
                     "type": "wallet",
                     "identifier": wallet["value"],
                     "confidence": wallet["confidence"],
-                    "observedAt": wallet["date"],
+                    "observedAt": wallet["date"] or actor_created_at,
                     "recordId": wallet["id"],
                 })
                 graph_edges.append({
@@ -352,6 +364,7 @@ def build_actor_dossier(actor: Actor, db: Session, include_graph: bool = True) -
                     "to": wallet["id"],
                     "kind": "USES_WALLET",
                     "confidence": wallet["confidence"],
+                    "observedAt": wallet["date"] or actor_created_at,
                 })
 
     confidence_pct = round((actor.confidence or 0.85) * 100, 1)
@@ -362,7 +375,7 @@ def build_actor_dossier(actor: Actor, db: Session, include_graph: bool = True) -
         "description": f"Deanonymized threat persona attributed with {len(actor_idents)} verified underground identifiers.",
         "priority": "HIGH" if confidence_pct >= 80 else "MEDIUM",
         "confidence": confidence_pct,
-        "firstSeen": actor.created_at.isoformat() if actor.created_at else None,
+        "firstSeen": actor_created_at,
         "lastSeen": actor.last_seen.isoformat() if actor.last_seen else None,
         "aliases": aliases,
         "keys": keys,
