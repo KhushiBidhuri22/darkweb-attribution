@@ -9,39 +9,34 @@ load_dotenv()
 
 class Neo4jService:
     def __init__(self):
-        uri = os.getenv(
-            "NEO4J_URI",
-            "bolt://localhost:7687",
-        )
+        user = os.getenv("NEO4J_USER", "neo4j")
+        password = os.getenv("NEO4J_PASSWORD", "sih_password")
+        self.database = os.getenv("NEO4J_DATABASE", "neo4j")
 
-        user = os.getenv(
-            "NEO4J_USER",
-            "neo4j",
-        )
+        env_uri = os.getenv("NEO4J_URI", "bolt://localhost:7687")
+        candidates = [env_uri, "bolt://localhost:7687", "bolt://127.0.0.1:7687", "bolt://neo4j:7687"]
 
-        password = os.getenv(
-            "NEO4J_PASSWORD",
-        )
+        self.driver = None
+        for uri in candidates:
+            try:
+                driver = GraphDatabase.driver(uri, auth=(user, password))
+                driver.verify_connectivity()
+                self.driver = driver
+                break
+            except Exception:
+                continue
 
-        self.database = os.getenv(
-            "NEO4J_DATABASE",
-            "neo4j",
-        )
+        if self.driver is None:
+            # Fallback driver without verify_connectivity to avoid startup crash
+            self.driver = GraphDatabase.driver(env_uri, auth=(user, password))
 
-        if not password:
-            raise RuntimeError(
-                "NEO4J_PASSWORD is not configured."
-            )
-
-        self.driver = GraphDatabase.driver(
-            uri,
-            auth=(user, password),
-        )
     def verify(self):
-        self.driver.verify_connectivity()
+        if self.driver:
+            self.driver.verify_connectivity()
 
     def close(self):
-        self.driver.close()
+        if self.driver:
+            self.driver.close()
 
     def get_actor_graph(self, actor_id: str) -> dict:
         query = """
@@ -53,11 +48,22 @@ class Neo4jService:
         RETURN actor, collect(path) AS paths
         """
 
-        records, _, _ = self.driver.execute_query(
-            query,
-            actor_id=str(actor_id),
-            database_=self.database,
-        )
+        try:
+            records, _, _ = self.driver.execute_query(
+                query,
+                actor_id=str(actor_id),
+                database_=self.database,
+            )
+        except Exception:
+            return {
+                "actor_id": str(actor_id),
+                "nodes": [],
+                "edges": [],
+                "metrics": {},
+                "related_actors": [],
+                "graph_score": 0.0,
+                "evidence": [],
+            }
 
         if not records:
             return {

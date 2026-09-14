@@ -115,7 +115,7 @@ def export_actor_report(actor_id: str, db: Session = Depends(get_db)):
 @router.get("/{actor_id}")
 def export_actor_record(
     actor_id: str,
-    format: str = Query("json", regex="^(csv|json)$"),
+    format: str = Query("json", pattern="^(csv|json)$"),
     db: Session = Depends(get_db),
 ):
     """

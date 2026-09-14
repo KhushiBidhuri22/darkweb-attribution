@@ -1,35 +1,45 @@
 import os
 from pathlib import Path
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
 from sqlalchemy.orm import declarative_base, sessionmaker
 from dotenv import load_dotenv
 
 # Load .env
 load_dotenv()
 
-POSTGRES_HOST = os.getenv("POSTGRES_HOST", "postgres")
 POSTGRES_PORT = os.getenv("POSTGRES_PORT", "5432")
 POSTGRES_DB = os.getenv("POSTGRES_DB", "sih_darkweb")
 POSTGRES_USER = os.getenv("POSTGRES_USER", "sih_user")
 POSTGRES_PASSWORD = os.getenv("POSTGRES_PASSWORD", "sih_password")
+ENV_POSTGRES_HOST = os.getenv("POSTGRES_HOST", "localhost")
 
-SQLALCHEMY_DATABASE_URL = (
-    f"postgresql+psycopg://{POSTGRES_USER}:{POSTGRES_PASSWORD}@{POSTGRES_HOST}:{POSTGRES_PORT}/{POSTGRES_DB}"
-)
 
-try:
-    engine = create_engine(
-        SQLALCHEMY_DATABASE_URL,
-        pool_pre_ping=True,
-    )
-except Exception:
+def create_resilient_engine():
+    candidate_hosts = [ENV_POSTGRES_HOST]
+    for h in ["localhost", "127.0.0.1", "postgres"]:
+        if h not in candidate_hosts:
+            candidate_hosts.append(h)
+
+    for host in candidate_hosts:
+        url = f"postgresql+psycopg://{POSTGRES_USER}:{POSTGRES_PASSWORD}@{host}:{POSTGRES_PORT}/{POSTGRES_DB}"
+        try:
+            eng = create_engine(url, pool_pre_ping=True)
+            with eng.connect() as conn:
+                conn.execute(text("SELECT 1"))
+            return eng
+        except Exception:
+            continue
+
     # Fallback SQLite if postgres not reachable during dev
-    BACKEND_DIR = Path(__file__).resolve().parents[1]
-    DATABASE_PATH = BACKEND_DIR / "app.db"
-    engine = create_engine(
-        f"sqlite:///{DATABASE_PATH.as_posix()}",
+    backend_dir = Path(__file__).resolve().parents[1]
+    db_path = backend_dir / "app.db"
+    return create_engine(
+        f"sqlite:///{db_path.as_posix()}",
         connect_args={"check_same_thread": False},
     )
+
+
+engine = create_resilient_engine()
 
 SessionLocal = sessionmaker(
     autocommit=False,
