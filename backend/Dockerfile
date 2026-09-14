@@ -7,8 +7,9 @@ COPY backend/requirements.txt /app/requirements.txt
 RUN pip install --no-cache-dir -r /app/requirements.txt
 
 COPY backend /app/backend
-
 COPY ml /app/ml
+COPY scripts /app/scripts
+COPY data /app/data
 
 EXPOSE 8000
 

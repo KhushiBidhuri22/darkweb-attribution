@@ -13,8 +13,14 @@
  */
 
 // 1 — SERVER ADDRESS AND ENDPOINT PATHS
+const isLocal = typeof window !== 'undefined' && (
+  window.location.hostname === 'localhost' ||
+  window.location.hostname === '127.0.0.1' ||
+  window.location.hostname === ''
+);
+
 export const apiConfig = {
-  baseUrl: "https://darkweb-attribution-1.onrender.com", // Paste the actual backend origin here. No trailing slash needed.
+  baseUrl: isLocal ? 'http://localhost:8000' : 'https://darkweb-attribution-1.onrender.com', // Points to local backend when run locally, or Render production backend
   credentials: 'include', // Cookie session. Backend must authorize requests.
   timeoutMs: 15000,
   endpoints: {
