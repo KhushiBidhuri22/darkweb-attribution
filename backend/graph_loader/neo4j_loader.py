@@ -1,14 +1,18 @@
-﻿import os
-from datetime import date, datetime
-from decimal import Decimal
-from typing import Any
+﻿from pathlib import Path
 
-import psycopg
 from dotenv import load_dotenv
-from neo4j import GraphDatabase
-from psycopg.rows import dict_row
 
-load_dotenv()
+
+PROJECT_ROOT = (
+    Path(__file__).resolve().parents[2]
+)
+
+ENV_PATH = PROJECT_ROOT / ".env"
+
+load_dotenv(
+    dotenv_path=ENV_PATH,
+    override=True,
+)
 
 POSTGRES_HOST = os.getenv("POSTGRES_HOST", "localhost")
 POSTGRES_PORT = int(os.getenv("POSTGRES_PORT", "5432"))

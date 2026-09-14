@@ -3,30 +3,35 @@ from sqlalchemy.orm import Session
 from ..models import Actor, Identifier, Post
 
 
+def compute_actor_confidence(actor: Actor, db: Session) -> float:
+    identifier_count = db.query(Identifier).filter(Identifier.actor_id == actor.id).count()
+    post_count = db.query(Post).filter(Post.handle == actor.primary_handle).count()
+
+    # Identifiers (handle/key/wallet) are real evidence; post volume alone is weak signal.
+    score = min(0.15 + (identifier_count * 0.2) + min(post_count * 0.01, 0.15), 1.0)
+    return round(score, 2)
+
+
 def sync_actors_from_posts(db: Session):
     """
     Turn raw posts into actor profiles + identifiers.
     Simple v1: group by handle, create one actor per handle.
     """
 
-    # Fetch all posts (you can later add filters / batching)
     posts = db.query(Post).all()
 
-    # Group by handle
     by_handle: dict[str, list[Post]] = {}
     for p in posts:
         h = p.handle
         by_handle.setdefault(h, []).append(p)
 
     for handle, handle_posts in by_handle.items():
-        # Get or create actor
         actor = db.query(Actor).filter(Actor.primary_handle == handle).first()
         if not actor:
             actor = Actor(primary_handle=handle)
             db.add(actor)
-            db.flush()  # to get actor.id
+            db.flush()
 
-        # Ensure handle identifier exists
         existing_handle_ident = (
             db.query(Identifier)
             .filter(
@@ -40,7 +45,6 @@ def sync_actors_from_posts(db: Session):
             ident = Identifier(type="handle", value=handle, actor_id=actor.id)
             db.add(ident)
 
-        # Add PGP keys and wallets as identifiers
         for p in handle_posts:
             if p.pgp_key:
                 exists = (
@@ -69,5 +73,8 @@ def sync_actors_from_posts(db: Session):
                 if not exists:
                     ident = Identifier(type="wallet", value=p.wallet, actor_id=actor.id)
                     db.add(ident)
+
+        db.flush()  # make sure new identifiers are counted before scoring
+        actor.confidence = compute_actor_confidence(actor, db)
 
     db.commit()

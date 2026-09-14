@@ -1,41 +1,34 @@
 import os
-from typing import Any
-
-from dotenv import load_dotenv
-from neo4j import GraphDatabase
-import os
 from pathlib import Path
-from typing import Any
 
 from dotenv import load_dotenv
 from neo4j import GraphDatabase
 
-env_path = Path(__file__).resolve().parents[2] / ".env"
-load_dotenv(dotenv_path=env_path)
 
-load_dotenv()
+PROJECT_ROOT = (
+    Path(__file__).resolve().parents[3]
+)
 
+ENV_PATH = PROJECT_ROOT / ".env"
 
+if not ENV_PATH.exists():
+    raise RuntimeError(
+        f".env file not found at: {ENV_PATH}"
+    )
+
+load_dotenv(
+    dotenv_path=ENV_PATH,
+    override=True,
+)
 class Neo4jService:
     def __init__(self):
-        uri = os.getenv(
-            "NEO4J_URI",
-            "bolt://localhost:7687",
-        )
-        user = os.getenv(
-            "NEO4J_USER",
-            "neo4j",
-        )
+        uri = os.getenv("NEO4J_URI", "bolt://localhost:7687")
+        user = os.getenv("NEO4J_USER", "neo4j")
         password = os.getenv("NEO4J_PASSWORD")
-        self.database = os.getenv(
-            "NEO4J_DATABASE",
-            "neo4j",
-        )
+        self.database = os.getenv("NEO4J_DATABASE", "neo4j")
 
         if not password:
-            raise RuntimeError(
-                "NEO4J_PASSWORD is not configured."
-            )
+            raise RuntimeError("NEO4J_PASSWORD is not configured.")
 
         self.driver = GraphDatabase.driver(
             uri,
@@ -48,18 +41,12 @@ class Neo4jService:
     def close(self):
         self.driver.close()
 
-    def get_actor_graph(
-        self,
-        actor_id: str,
-        max_hops: int = 2,
-    ) -> dict[str, Any]:
+    def get_actor_graph(self, actor_id: str) -> dict:
         query = """
-        MATCH (
-            actor:Entity {
-                entity_type: 'actor',
-                entity_id: $actor_id
-            }
-        )
+        MATCH (actor:Entity {
+            entity_type: 'actor',
+            entity_id: $actor_id
+        })
         OPTIONAL MATCH path = (actor)-[*1..2]-(related)
         RETURN actor, collect(path) AS paths
         """
@@ -72,92 +59,78 @@ class Neo4jService:
 
         if not records:
             return {
-                "actor_id": actor_id,
+                "actor_id": str(actor_id),
                 "nodes": [],
                 "edges": [],
                 "metrics": {},
+                "related_actors": [],
+                "graph_score": 0.0,
+                "evidence": [],
             }
 
         record = records[0]
         actor = record["actor"]
         paths = record["paths"]
+        nodes_by_id = {}
+        edges_by_id = {}
 
-        nodes = {}
-        edges = {}
+        def add_node(node):
+            entity_type = str(
+                node.get("entity_type", "entity")
+            ).lower()
+            node_id = node.element_id
+            entity_id = str(
+                node.get("entity_id", node_id)
+            )
+            nodes_by_id[node_id] = {
+                "id": node_id,
+                "entity_id": entity_id,
+                "entity_type": entity_type,
+                "type": entity_type,
+                "label": entity_id,
+            }
 
-        nodes[actor.element_id] = {
-            "id": actor.element_id,
-            "type": actor.get(
-                "entity_type",
-                "actor",
-            ),
-            "label": actor.get(
-                "entity_id",
-                actor.element_id,
-            ),
-        }
+        add_node(actor)
 
         for path in paths:
             if path is None:
                 continue
-
             for node in path.nodes:
-                nodes[node.element_id] = {
-                    "id": node.element_id,
-                    "type": node.get(
-                        "entity_type",
-                        "entity",
-                    ),
-                    "label": node.get(
-                        "entity_id",
-                        node.element_id,
-                    ),
-                }
-
+                add_node(node)
             for relationship in path.relationships:
-                edge_key = relationship.element_id
-
-                edges[edge_key] = {
-                    "id": edge_key,
+                edges_by_id[relationship.element_id] = {
+                    "id": relationship.element_id,
                     "source": relationship.start_node.element_id,
                     "target": relationship.end_node.element_id,
                     "type": relationship.type,
-                    "confidence": relationship.get(
-                        "confidence"
-                    ),
+                    "confidence": relationship.get("confidence"),
+                    "observed_at": relationship.get("event_timestamp"),
                 }
 
         related_actor_count = sum(
             1
-            for node in nodes.values()
-            if node["type"] == "actor"
+            for node in nodes_by_id.values()
+            if node["entity_type"] == "actor"
             and node["id"] != actor.element_id
         )
 
-        graph_score = min(
-            related_actor_count * 0.15,
-            1.0,
-        )
+        graph_score = min(related_actor_count * 0.15, 1.0)
 
         return {
-            "actor_id": actor_id,
-            "nodes": list(nodes.values()),
-            "edges": list(edges.values()),
+            "actor_id": str(actor_id),
+            "nodes": list(nodes_by_id.values()),
+            "edges": list(edges_by_id.values()),
             "metrics": {
-                "node_count": len(nodes),
-                "edge_count": len(edges),
-                "related_actor_count": (
-                    related_actor_count
-                ),
+                "node_count": len(nodes_by_id),
+                "edge_count": len(edges_by_id),
+                "related_actor_count": related_actor_count,
             },
             "related_actors": [
-                node["label"]
-                for node in nodes.values()
-                if node["type"] == "actor"
+                node["entity_id"]
+                for node in nodes_by_id.values()
+                if node["entity_type"] == "actor"
                 and node["id"] != actor.element_id
             ],
-            "graph_score": round(
-                graph_score,
-                3,
-            ),
+            "graph_score": round(graph_score, 3),
+            "evidence": [],
         }

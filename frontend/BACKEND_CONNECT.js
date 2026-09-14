@@ -14,7 +14,9 @@
 
 // 1 — SERVER ADDRESS AND ENDPOINT PATHS
 export const apiConfig = {
-  baseUrl: 'http://localhost:8000', // Paste the actual backend origin here. No trailing slash needed.
+  baseUrl:
+  import.meta.env.VITE_API_URL ||
+  'http://localhost:8000', // Paste the actual backend origin here. No trailing slash needed.
   credentials: 'include', // Cookie session. Backend must authorize requests.
   timeoutMs: 15000,
   endpoints: {
